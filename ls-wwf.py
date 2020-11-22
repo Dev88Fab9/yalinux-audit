@@ -18,7 +18,6 @@ ww_modes = {'2', '3', '6' ,'7'}
 excl_flds = {'/proc/', '/dev/', '/sys/'}
 root = "/"
 delim = "#########################"
-j = 0
 AUTHOR = "Fabrizio Pani"
 EMAIL = "fabje AT centrum DOT cz"
 LICENSE = "GPL v2"
