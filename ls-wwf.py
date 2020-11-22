@@ -23,6 +23,7 @@ AUTHOR = "Fabrizio Pani"
 EMAIL = "fabje AT centrum DOT cz"
 LICENSE = "GPL v2"
 curpos = "" 
+wwfiles = [ ]
             
 print(delim)
 print(script_name)
@@ -41,9 +42,9 @@ try :
                  if pathfile.find(i) == 0 :
                     valid_tree = False
                     
-                 pos = pathfile.rfind("/")
-                 oldpos = curpos
-                 curpos =  pathfile[:pos +1 ]        
+            pos = pathfile.rfind("/")
+            oldpos = curpos
+            curpos =  pathfile[:pos +1 ]        
          
             if valid_tree :
                 if curpos != oldpos :
@@ -53,7 +54,7 @@ try :
                         mode = oct(status.st_mode)
                         o_mode = mode[len(mode) - 1 ]
                         if o_mode in ww_modes :
-                            print (TYELLOW, pathfile, ENDC)
+                            wwfiles.append(pathfile)
                 except MemoryError :
                         print (TRED, "Out of memory exception.", ENDC)
                         sys.exit(11)
@@ -69,6 +70,11 @@ except KeyboardInterrupt:
     err_msg = script_name + ": exiting on keyboard signal."
     print(err_msg)
     sys.exit(127)
+    
+
+print("World Writable files found: ")    
+for wwfile in  wwfiles :
+    print (TYELLOW, wwfile, ENDC)    
 
 print("Done")
 print(delim)
