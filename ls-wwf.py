@@ -15,7 +15,7 @@ if os.geteuid() != 0:
 
 # main loop
 ww_modes = {'2', '3', '6' ,'7'}
-excl_flds = {'/proc/', '/dev/', '/sys/'}
+excl_flds = {'/proc/', '/dev/', '/sys/', '/tmp'}
 root = "/"
 delim = "#########################"
 AUTHOR = "Fabrizio Pani"
