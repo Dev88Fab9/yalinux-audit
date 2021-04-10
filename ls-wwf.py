@@ -8,12 +8,12 @@ ENDC = '\033[m'
 
 SCRIPT_NAME = os.path.basename(__file__)
 if os.geteuid() != 0:
-    err_msg = " You need to be root to run " + script_name
+    err_msg = " You need to be root to run {}".format(SCRIPT_NAME)
     print(err_msg)
     sys.exit(5)
 
 # main loop
-ww_modes = {'2', '3', '6', '7'}
+WW_MODES = {'2', '3', '6', '7'}
 excl_flds = {'/proc/', '/dev/', '/sys/', '/tmp', '/var/run', '/run'}
 root = "/"
 delim = "#########################"
@@ -24,7 +24,7 @@ curpos = ""
 wwfiles = []
 
 print(delim)
-print(script_name)
+print(SCRIPT_NAME)
 print("Author: ", AUTHOR)
 print("E-mail: ", EMAIL)
 print("License:", LICENSE)
@@ -51,7 +51,7 @@ try:
                     status = os.stat(pathfile)
                     mode = oct(status.st_mode)
                     o_mode = mode[len(mode) - 1]
-                    if o_mode in ww_modes:
+                    if o_mode in WW_MODES:
                         wwfiles.append(pathfile)
                 except MemoryError:
                     print (TRED, "Out of memory exception.", ENDC)
@@ -62,10 +62,8 @@ try:
             else:
                 if curpos != oldpos:
                     print("Skipping ", pathfile[:pos +1])
-
-
 except KeyboardInterrupt:
-    err_msg = SCRIPT_NAME + ": exiting on keyboard signal."
+    err_msg = "{} :  exiting on keyboard signal.".format(SCRIPT_NAME)
     print(err_msg)
     sys.exit(127)
 
