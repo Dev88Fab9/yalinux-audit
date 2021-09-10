@@ -1,4 +1,5 @@
 from __future__ import print_function
+import datetime
 import os
 import sys
 
@@ -6,6 +7,7 @@ TRED = '\033[31m'
 TYELLOW = '\033[33m'
 ENDC = '\033[m'
 
+start_time = datetime.datetime.now()
 SCRIPT_NAME = os.path.basename(__file__)
 if os.geteuid() != 0:
     err_msg = " You need to be root to run {}".format(SCRIPT_NAME)
@@ -57,7 +59,7 @@ try:
                     print (TRED, "Out of memory exception.", ENDC)
                     sys.exit(11)
                 except:
-                    # all other errors, mainly I/O, are ignored
+                    # all other errors, access denied or I/O, are ignored
                     pass
             else:
                 if curpos != oldpos:
@@ -71,6 +73,7 @@ except KeyboardInterrupt:
 print("World Writable files found: ")
 for wwfile in  wwfiles:
     print (TYELLOW, wwfile, ENDC)
-
+stop_time = datetime.datetime.now()
+print("Execution time: {0}".format(stop_time - start_time))
 print("Done")
 print(delim)
