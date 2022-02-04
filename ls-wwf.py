@@ -52,14 +52,12 @@ try:
                 try:
                     status = os.stat(pathfile)
                     mode = oct(status.st_mode)
+                    # check "other" permission
                     o_mode = mode[len(mode) - 1]
                     if o_mode in WW_MODES:
                         wwfiles.append(pathfile)
-                except MemoryError:
-                    print (TRED, "Out of memory exception.", ENDC)
-                    sys.exit(11)
-                except:
-                    # all other errors, access denied or I/O, are ignored
+                except IOError:
+                    # ignore access issues
                     pass
             else:
                 if curpos != oldpos:
