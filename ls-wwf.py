@@ -9,10 +9,14 @@ ENDC = '\033[m'
 
 start_time = datetime.datetime.now()
 SCRIPT_NAME = os.path.basename(__file__)
-if os.geteuid() != 0:
-    err_msg = " You need to be root to run {}".format(SCRIPT_NAME)
-    print(err_msg)
-    sys.exit(5)
+try:
+    if os.geteuid() != 0:
+        err_msg = " You need to be root to run {}".format(SCRIPT_NAME)
+        print(err_msg)
+        sys.exit(5)
+except AttributeError:
+       print("Unsupported OS or configuration!")
+       sys.exit(1)
 
 # main loop
 WW_MODES = {'2', '3', '6', '7'}
@@ -57,8 +61,17 @@ try:
                     if o_mode in WW_MODES:
                         wwfiles.append(pathfile)
                 except IOError:
-                    # ignore access issues
+                    print (TYELLOW, ENDC)  
+                    print (sys.exc_type) 
+                    # it could be an issue limited to few resources, so pass
                     pass
+                    # all other errors exit
+                except MemoryError:
+                    print (TRED, "Out of memory exception.", ENDC)
+                    sys.exit(11)
+                except RuntimeError:
+                    print (TYELLOW, e, ENDC) 
+                    print (sys.exc_type)
             else:
                 if curpos != oldpos:
                     print("Skipping ", pathfile[:pos +1])
