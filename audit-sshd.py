@@ -48,8 +48,6 @@ safe_macs = ["hmac-sha2-256",
              "umac-128",
              "umac-128-etm@openssh.com",
              "umac-128@openssh.com",
-             "hmac-sha1",
-             "hmac-sha1@openssh.com",
              "hmac-sha1-etm@openssh.com",
              "hmac-ripemd160-etm@openssh.com",
              "hmac-ripemd160"
