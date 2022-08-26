@@ -52,7 +52,12 @@ safe_macs = ["hmac-sha2-256",
              "hmac-sha1@openssh.com",
              "hmac-sha1-etm@openssh.com",
              "hmac-ripemd160-etm@openssh.com",
-             "hmac-ripemd160"]
+             "hmac-ripemd160"
+             "hmac-ripemd256-etm@openssh.com",
+             "hmac-ripemd256",
+             "hmac-ripemd320-etm@openssh.com",
+             "hmac-ripemd320",
+             ]
              
 safe_ciphers = ["aes128-ctr",
                 "aes128-ctr@openssh.com", 
@@ -65,13 +70,7 @@ safe_ciphers = ["aes128-ctr",
                 "aes128-gcm",
                 "aes128-gcm@openssh.com",
                 "aes256-gcm",
-                "aes256-gcm@openssh.com",
-                "aes128-cbc",
-                "aes192-cbc",
-                "aes256-cbc",
-                "blowfish-cbc",
-                "cast128-cbc",
-                "3des-cbc"]
+                "aes256-gcm@openssh.com"]
 
 
 TRED, TGREEN, TYELLOW, RSTC = set_ansiterm()
