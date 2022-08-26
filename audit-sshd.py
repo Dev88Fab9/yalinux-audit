@@ -70,7 +70,9 @@ safe_ciphers = ["aes128-ctr",
                 "aes128-gcm",
                 "aes128-gcm@openssh.com",
                 "aes256-gcm",
-                "aes256-gcm@openssh.com"]
+                "aes256-gcm@openssh.com",
+                "arcfour256",
+                "arcfour128"]
 
 
 TRED, TGREEN, TYELLOW, RSTC = set_ansiterm()
