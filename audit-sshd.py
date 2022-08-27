@@ -31,15 +31,26 @@ sshd_opts = ["clientalivecountmax", "compression",
 #Note: macs and ciphers will be checked separately
 
 #STIG correct values
-sshd_opts_corr = ["clientalivecountmax 0", "compression no", 
-                   "gssapiauthentication no", "hostbasedauthentication no",
-                   "ignorerhosts yes", "ignoreuserknownhosts yes", 
-                   "kerberosauthentication no", "permitemptypasswords no",
-                   "permitrootlogin no", "permituserenvironment no", 
-                   "printlastlog yes", "protocol 2", "rhostsrsaauthentication no", 
-                   "strictmodes yes","useprivilegeseparation no"]
+sshd_opts_corr = [
+                   "clientalivecountmax 0", 
+                   "compression no", 
+                   "gssapiauthentication no", 
+                   "hostbasedauthentication no",
+                   "ignorerhosts yes", 
+                   "ignoreuserknownhosts yes", 
+                   "kerberosauthentication no", 
+                   "permitemptypasswords no",
+                   "permitrootlogin no", 
+                   "permituserenvironment no", 
+                   "printlastlog yes", 
+                   "protocol 2", 
+                   "rhostsrsaauthentication no", 
+                   "strictmodes yes",
+                   "useprivilegeseparation no"
+                   ]
 
-safe_macs = ["hmac-sha2-256", 
+safe_macs = [
+             "hmac-sha2-256", 
              "hmac-sha2-256@openssh.com",
              "hmac-sha2-256-etm@openssh.com",
              "hmac-sha2-512",
@@ -54,10 +65,11 @@ safe_macs = ["hmac-sha2-256",
              "hmac-ripemd256-etm@openssh.com",
              "hmac-ripemd256",
              "hmac-ripemd320-etm@openssh.com",
-             "hmac-ripemd320",
+             "hmac-ripemd320"
              ]
              
-safe_ciphers = ["aes128-ctr",
+safe_ciphers = [
+                "aes128-ctr",
                 "aes128-ctr@openssh.com", 
                 "aes192-ctr", 
                 "aes192-ctr@openssh.com",
@@ -70,16 +82,20 @@ safe_ciphers = ["aes128-ctr",
                 "aes256-gcm",
                 "aes256-gcm@openssh.com",
                 "arcfour256",
-                "arcfour128"]
+                "arcfour128"
+                ]
 
 
-TRED, TGREEN, TYELLOW, RSTC = set_ansiterm()
+TCOLOR = set_ansiterm()
 
 def proc_err(ret_code, stdout, stderr):
-    print(TRED, "Error while fetching the sshd configuration.", RSTC)    
-    print(TRED, "Error message: ", stdout, RSTC)
-    print(TRED, "Error message: ", stderr, RSTC)
-    print(TRED, "Error code: ", ret_code, RSTC)
+    """
+        Display error and exit
+    """
+    print(TCOLOR["TRED"], "Error while fetching the sshd configuration.", TCOLOR["RSTC"])    
+    print(TCOLOR["TRED"], "Error message: ", stdout, TCOLOR["RSTC"])
+    print(TCOLOR["TRED"], "Error message: ", stderr, TCOLOR["RSTC"])
+    print(TCOLOR["TRED"], "Error code: ", ret_code, TCOLOR["RSTC"])
 
     sys.exit(ret_code)    
     
@@ -89,15 +105,17 @@ def main():
 
     try:
         if os.getuid() != 0:
-            print(TRED, "You need to have root privileges.", RSTC)
+            print(TCOLOR["TRED"], "You need to have root privileges.", 
+                  TCOLOR["RSTC"])
             sys.exit(5)
     except AttributeError:
-        print(TRED, "Unsupported OS or config", RSTC)
+        print(TCOLOR["TRED"], "Unsupported OS or config", TCOLOR["RSTC"])
         sys.exit(1)
         
     if not which_prg("sshd"):
-        print(TRED, "sshd not found or not in the path.", RSTC)
-        exit(1)
+        print(TCOLOR["TRED"], "sshd not found or not in the path.", 
+              TCOLOR["RSTC"])
+        sys.exit(1)
         
     print("Script to audit the SSHD configuration for any security deviation.")  
     print("Currently based on the STIG recommendations; more on: \
@@ -112,7 +130,8 @@ https://stigviewer.com/stigs")
     if not (check_procrun("sshd")):
        print("Notice: The sshd process is not running.")
     else:
-       print(TGREEN, "The sshd process is running: => OK", RSTC)
+       print(TCOLOR["TGREEN"], "The sshd process is running: OK", 
+             TCOLOR["RSTC"])
        
     ret_code, stdout, stderr = run_prg("sshd", "-T")
     if ret_code != 0:
@@ -134,12 +153,13 @@ https://stigviewer.com/stigs")
             if sshd_opt_corr.startswith(sshd_cfg_chk_elem[0]):
                 corr_val = sshd_opt_corr.split()[1]
                 if sshd_cfg_chk_elem[1] != corr_val:
-                    print(TYELLOW, "The sshd option ", sshd_cfg_chk_elem, 
-                          " is not compliant", RSTC)
+                    print(TCOLOR["TYELLOW"], "The sshd option ", 
+                          sshd_cfg_chk_elem, " is not compliant", 
+                          TCOLOR["RSTC"])
                     is_compliant = False       
                 break    
 
-    print("\nChecking for unsafe MAC algorithms..")
+    print("\nChecking for weak MAC algorithms..")
     ret_code, stdout, stderr = run_piped_prg("sshd", "-T", "|", 
                                              "grep", "-w","macs")
     if ret_code != 0:
@@ -154,15 +174,15 @@ https://stigviewer.com/stigs")
         if safe_mac in sshd_macs:
             sshd_macs.remove(safe_mac)
     if sshd_macs:
-        print(TYELLOW, "Warning! The following unsafe MAC algorithms have been \
-found:", RSTC)
+        print(TCOLOR["TYELLOW"], "Warning! The following unsafe MAC algorithms \
+have been found:", TCOLOR["RSTC"])
         for sshd_mac in sshd_macs:
             print(sshd_mac)
         is_compliant = False    
     else:
-        print(TGREEN, "MAC algorithms are OK", RSTC)
+        print(TCOLOR["TGREEN"], "MAC algorithms: OK", TCOLOR["RSTC"])
      
-    print("\nChecking for unsafe ciphers..")
+    print("\nChecking for weak ciphers..")
     ret_code, stdout, stderr = run_piped_prg("sshd", "-T", "|", 
                                              "grep","-w","ciphers")
     if ret_code != 0:
@@ -176,18 +196,21 @@ found:", RSTC)
         if safe_cipher in sshd_ciphers:
                 sshd_ciphers.remove(safe_cipher)
     if sshd_ciphers:
-        print(TYELLOW, "Warning! The following unsafe ciphers have been found.",
-              RSTC)
+        print(TCOLOR["TYELLOW"], "Warning! The following unsafe ciphers have \
+been found.",
+              TCOLOR["RSTC"])
         for sshd_cipher in sshd_ciphers:
             print(sshd_cipher)
         is_compliant = False
     else:
-        print(TGREEN, "ciphers are OK.", RSTC)    
+        print(TCOLOR["TGREEN"], "Ciphers are OK.", TCOLOR["RSTC"])    
         
     if is_compliant:
-        print(TGREEN, "\nsshd (OpenSSH) security settings are OK", RSTC)
+        print(TCOLOR["TGREEN"], "\nsshd (OpenSSH) security settings are OK", 
+        TCOLOR["RSTC"])
     else:
-        print(TYELLOW, "\nsshd (OpenSSH) security settings are NOT OK", RSTC)
+        print(TCOLOR["TYELLOW"], "\nsshd (OpenSSH) security settings are \
+NOT OK", TCOLOR["RSTC"])
        
 if __name__ == "__main__":
     main() 

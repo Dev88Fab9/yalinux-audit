@@ -32,7 +32,10 @@ def which_prg(PrgName):
 
         
 def run_prg(*PrgArgs):
-    
+    """
+        Run a command 
+        Returns exit code, standard error and standard output
+    """
     cmd = list(PrgArgs)
     if not cmd:
         raise Exception("You must specify a command.")
@@ -47,6 +50,10 @@ def run_prg(*PrgArgs):
     
     
 def run_piped_prg(*PrgArgs):
+    """
+       Pipe the STDOUT of a command to STDIN of the second command
+       Returns exit code, standard error and standard output
+    """
     PIPE = chr(124)
     pre_cmds = list(PrgArgs)
 
