@@ -22,19 +22,29 @@ except ImportError:
 except RuntimeError:
     print("Error on one or more modules.")
     print(traceback.print_exc())
-sshd_opts = ["clientalivecountmax", "compression", 
-              "gssapiauthentication", "hostbasedauthentication",
-              "ignorerhosts", "ignoreuserknownhosts", 
-              "kerberosauthentication", "permitemptypasswords",
-              "permitrootlogin", "permituserenvironment", "printlastlog",
-              "protocol", "rhostsrsaauthentication", "strictmodes", 
-              "useprivilegeseparation"]
+sshd_opts = [
+             "clientalivecountmax", 
+             "compression", 
+             "gssapiauthentication", 
+             "hostbasedauthentication",
+             "ignorerhosts",
+             "ignoreuserknownhosts", 
+             "kerberosauthentication", 
+             "permitemptypasswords",
+             "permitrootlogin", 
+             "permituserenvironment",
+             "printlastlog",
+             "protocol", 
+             "rhostsrsaauthentication", 
+             "strictmodes", 
+             "useprivilegeseparation"
+             ]
 #Note: macs and ciphers will be checked separately
 
 #STIG correct values
 sshd_opts_corr = [
                    "clientalivecountmax 0", 
-                   "compression no",
+                   "compression no delayed",
                    "gssapiauthentication no",
                    "hostbasedauthentication no",
                    "ignorerhosts yes",
@@ -184,8 +194,8 @@ def check_sshd_config(is_compliant):
         Returns is_compliant
     """
 
-    #Filtering only the values we are interested with
-    print("\nChecking for sshd_config options..")
+    
+    print("\nChecking for sshd_config options")
     ret_code, stdout, stderr = run_prg("sshd", "-T")
     if ret_code != 0:
         proc_err(ret_code, stdout, stderr)
@@ -194,30 +204,37 @@ def check_sshd_config(is_compliant):
 
     sshd_cfg_all_rows = stdout.split(NL)
     sshd_cfg_chk_rows = []
+    #Filtering out the options we are not interested to
     for sshd_cfg_all_row in sshd_cfg_all_rows:
         for sshd_opt in sshd_opts:
             if sshd_cfg_all_row.startswith(sshd_opt):
                 sshd_cfg_chk_rows.append(sshd_cfg_all_row)
                 break
+    #main loop            
     for sshd_cfg_chk_row in sshd_cfg_chk_rows:
         sshd_cfg_chk_elem = sshd_cfg_chk_row.split()
         for sshd_opt_corr in sshd_opts_corr:
             if sshd_opt_corr.startswith(sshd_cfg_chk_elem[0]):
-                corr_val = sshd_opt_corr.split()[1]
-                if sshd_cfg_chk_elem[1] != corr_val:
+                corr_val = sshd_opt_corr.split()[1:]
+                if not sshd_cfg_chk_elem[1] in corr_val:
                     sshd_cfg_chk_elem = str(sshd_cfg_chk_elem)
-                    sshd_cfg_chk_elem = re.sub('[\[\]\']', '', 
+                    sshd_cfg_chk_elem = re.sub('[\[\]\']', '',
                                                sshd_cfg_chk_elem)
                     sshd_cfg_chk_elem = sshd_cfg_chk_elem.replace(chr(44),
-                                                                  chr(58))
-                    print(TCOLOR["TYELLOW"], "The sshd option ", 
+                                                                  chr(58))                                        
+                    print(TCOLOR["TYELLOW"], "The sshd option ",
                           TCOLOR["BYELLOW"], sshd_cfg_chk_elem, TCOLOR["RSTC"],
-                          TCOLOR["TYELLOW"], " is not compliant", 
+                          TCOLOR["TYELLOW"], " is not compliant",
                           TCOLOR["RSTC"])
                     is_compliant = False
                 break
-
+                
+    if is_compliant:
+        print(TCOLOR["TYELLOW"], "OK", TCOLOR["RSTC"])  
+        
     return is_compliant
+    
+    
 def check_macs(is_compliant):
     """
         Checks for weak macs algorithms
@@ -256,7 +273,7 @@ def check_ciphers(is_compliant):
         Returns is_compliant
     """
     
-    print("\nChecking for weak ciphers..")
+    print("\nChecking for weak ciphers..", end = ' ')
     ret_code, stdout, stderr = run_piped_prg("sshd", "-T", "|", 
                                              "grep","-w","ciphers")
     if ret_code != 0:
@@ -277,11 +294,37 @@ been found.",
             print(TCOLOR["BYELLOW"], sshd_cipher, TCOLOR["RSTC"])
         is_compliant = False
     else:
-        print(TCOLOR["TGREEN"], "Ciphers are OK.", TCOLOR["RSTC"])
+        print(TCOLOR["TGREEN"], "OK", TCOLOR["RSTC"])
 
     return is_compliant
 
 
+def verify_sshd_config(is_compliant):
+    """
+        Verifies the sshd config 
+    """
+    
+    ret_code, stdout, stderr = run_prg("sshd", "-t")
+    if not ret_code == 0:
+        return False
+        
+    return True    
+    
+
+def check_sshd_config_perms(is_compliant, config_file):
+    """
+        Verifies the sshd config permissions
+    """
+    
+    status = os.stat(config_file)
+    o_mode = oct(status.st_mode)[-1]
+    g_mode = oct(status.st_mode)[-2]
+    if not o_mode == 0 and g_mode == 0:
+        return False
+        
+    return True
+    
+        
 def main():
     """
         Main func
@@ -305,9 +348,30 @@ def main():
     if not check_procrun("sshd"):
         print("Notice: The sshd process is not running.")
     else:
-        print(TCOLOR["TGREEN"], "The sshd process is running: OK",
-             TCOLOR["RSTC"])
+        print("The sshd process is running:", end = ' ')
+        print(TCOLOR["TGREEN"], "OK", TCOLOR["RSTC"])     
         
+    print("Checking for configuration errors:", end = ' ')    
+    is_compliant = verify_sshd_config(is_compliant)
+    if not is_compliant:
+        print(TCOLOR["TRED"], "\nFatal: a configuration error was reported.",
+             TCOLOR["RSTC"])
+        print(TCOLOR["TRED"], stdout, TCOLOR["RSTC"])  
+        print("Fix any issue and try again")
+        sys.exit(1)
+    else:
+        print(TCOLOR["TGREEN"], "OK", TCOLOR["RSTC"]) 
+    
+    print("Configuration file permissions:", end = ' ')
+    config_file = '/etc/ssh/sshd_config'
+    is_compliant = check_sshd_config_perms(is_compliant, config_file)
+    if is_compliant:
+        print(TCOLOR["TGREEN"], "OK", TCOLOR["RSTC"])
+    else:
+        print(TCOLOR["TYELLOW"], "Warning. The sshd_config file should be \
+ accessible only by root.", TCOLOR["RSTC"])
+    
+    
     is_compliant = check_sshd_config(is_compliant)
     is_compliant = check_macs(is_compliant)
     is_compliant = check_ciphers(is_compliant)
