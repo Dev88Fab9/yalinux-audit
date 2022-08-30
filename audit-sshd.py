@@ -108,7 +108,7 @@ More info at https://www.python.org/doc/sunset-python-2/
 """
 
 if PyMajVer == 2 and PyMinVer == 6:
-    print(TCOLOR{"TYELLOW"], old_ver_msg2, TCOLOR["RSTC"])
+    print(TCOLOR["TYELLOW"], old_ver_msg2, TCOLOR["RSTC"])
 if PyMajVer == 2 and PyMinVer < 6:
     print(TCOLOR["TYELLOW"], old_ver_msg3, TCOLOR["RSTC"])
     print("Exiting...")
