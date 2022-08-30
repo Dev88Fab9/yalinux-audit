@@ -1,45 +1,36 @@
-"""
-   Module containing OS utilities
-"""
-import sys
-
 try:
     import psutil
 except ImportError:
     print("It looks like you need to install the python psutil module.")
-    sys.exit(1)
+    sys.exit(1) 
 import subprocess
 
 
 def check_procrun(ProcName):
-    """
-        Checks if a process is running
-    """
     for proc in psutil.process_iter():
         try:
             if str(ProcName).lower() in str(proc.name).lower():
                 return True
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-            pass
+                pass
     return False
 
 
 def which_prg(PrgName):
-    """
-        Checks if a program is in the path
-    """
+    
     cmd = ['which', PrgName]
     p = subprocess.Popen(cmd,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
     p.wait()
     ret_code = p.returncode
+
     if ret_code == 0:
         return True
+    else:
+        return False
 
-    return False
-
-
+        
 def run_prg(*PrgArgs):
     """
         Run a command 
@@ -73,10 +64,10 @@ def run_piped_prg(*PrgArgs):
     i = pre_cmds.index(PIPE)
     if i == len(pre_cmds) - 1:
         raise Exception("Malformed cmdline arg: pipe as last char.")
-
+    
     firstcmd = pre_cmds[0: i]
     pipedcmd = pre_cmds[i + 1 : len(pre_cmds)]
-
+   
     p1 = subprocess.Popen(firstcmd, stdout=subprocess.PIPE)
     p1.wait()
     p2 = subprocess.Popen(pipedcmd, stdin=p1.stdout, 

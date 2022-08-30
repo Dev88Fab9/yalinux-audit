@@ -1,27 +1,20 @@
-"""
-Script to audit the SSHD configuration for any security
-deviation, currently based on the STIG recommendations; more on: 
-https://stigviewer.com/stigs 
-"""
 from __future__ import print_function
 import argparse
+import datetime
 import os
-import platform
 import re
 import sys
-import traceback
+import time
 ScriptName = os.path.basename(__file__)
 CurrAbsPath = os.path.dirname(os.path.realpath(ScriptName))
 sys.path.append(CurrAbsPath + "/libaudit")
 try:
     from libaudit.osutils import *
     from libaudit.ui import set_ansiterm
-except ImportError:
+except:
     print("Error while importing one or more modules.")
     sys.exit(1)
-except RuntimeError:
-    print("Error on one or more modules.")
-    print(traceback.print_exc())
+    
 sshd_opts = ["clientalivecountmax", "compression", 
               "gssapiauthentication", "hostbasedauthentication",
               "ignorerhosts", "ignoreuserknownhosts", 
@@ -34,18 +27,18 @@ sshd_opts = ["clientalivecountmax", "compression",
 #STIG correct values
 sshd_opts_corr = [
                    "clientalivecountmax 0", 
-                   "compression no",
-                   "gssapiauthentication no",
+                   "compression no", 
+                   "gssapiauthentication no", 
                    "hostbasedauthentication no",
-                   "ignorerhosts yes",
-                   "ignoreuserknownhosts yes",
-                   "kerberosauthentication no",
+                   "ignorerhosts yes", 
+                   "ignoreuserknownhosts yes", 
+                   "kerberosauthentication no", 
                    "permitemptypasswords no",
-                   "permitrootlogin no",
-                   "permituserenvironment no",
-                   "printlastlog yes",
+                   "permitrootlogin no", 
+                   "permituserenvironment no", 
+                   "printlastlog yes", 
                    "protocol 2", 
-                   "rhostsrsaauthentication no",
+                   "rhostsrsaauthentication no", 
                    "strictmodes yes",
                    "useprivilegeseparation no"
                    ]
@@ -68,11 +61,11 @@ safe_macs = [
              "hmac-ripemd320-etm@openssh.com",
              "hmac-ripemd320"
              ]
-
+             
 safe_ciphers = [
                 "aes128-ctr",
                 "aes128-ctr@openssh.com", 
-                "aes192-ctr",
+                "aes192-ctr", 
                 "aes192-ctr@openssh.com",
                 "aes256-ctr",
                 "aes256-ctr@openssh.com",
@@ -85,42 +78,44 @@ safe_ciphers = [
                 "arcfour256",
                 "arcfour128"
                 ]
+                
+TCOLOR = set_ansiterm()    
 
-TCOLOR = set_ansiterm()
-
-
-NL = '\n'
+    
+nl = '\n' 
+is_compliant = True   
+import platform
 if int(platform.python_version_tuple()[0]) < 3:
-    PY_MAJ_VER = 2
+    PyMajVer = 2 
 else:
-    PY_MAJ_VER = 3
-PY_MIN_VER = int(platform.python_version_tuple()[1])
+    PyMajVer = 3 
+PyMinVer = int(platform.python_version_tuple()[1])
 
-OLD_VER_MSG1 = """
+old_ver_msg1 = """
 Warning, you are using a DEPRECATED python version.
 As of January 1st, 2020 Python 2 is no longer supported.
 More info at https://www.python.org/doc/sunset-python-2/
 """
-OLD_VER_MSG2 = """
+old_ver_msg2 = """
 Warning, you are using a DEPRECATED and untested python version.
 As of January 1st, 2020 Python 2 is no longer supported. 
 More info at https://www.python.org/doc/sunset-python-2/
 """
-OLD_VER_MSG3 = """
+old_ver_msg3 = """
 Warning, you are using a DEPRECATED and too old python version.
 As of January 1st, 2020 Python 2 is no longer supported. 
 More info at https://www.python.org/doc/sunset-python-2/
 """
 
-if PY_MAJ_VER == 2 and PY_MIN_VER == 6:
-    print(TCOLOR["TYELLOW"], OLD_VER_MSG2, TCOLOR["RSTC"])
-if PY_MAJ_VER == 2 and PY_MIN_VER < 6:
-    print(TCOLOR["TYELLOW"], OLD_VER_MSG3, TCOLOR["RSTC"])
+if PyMajVer == 2 and PyMinVer == 6:
+    print(TCOLOR["TYELLOW"], old_ver_msg2, TCOLOR["RSTC"])
+if PyMajVer == 2 and PyMinVer < 6:
+    print(TCOLOR["TYELLOW"], old_ver_msg3, TCOLOR["RSTC"])
     print("Exiting...")
     sys.exit(11)
-if PY_MAJ_VER == 2 and PY_MIN_VER == 7:
-    print(TCOLOR["TYELLOW"], OLD_VER_MSG1, TCOLOR["RSTC"])
-
+if PyMajVer == 2 and PyMinVer == 7:
+    print(TCOLOR["TYELLOW"], old_ver_msg1, TCOLOR["RSTC"])
+  
 
 str_prolog = """ 
 Script to audit the SSHD configuration for any security
@@ -128,7 +123,7 @@ deviation, currently based on the STIG recommendations; more on:
 https://stigviewer.com/stigs 
 Note that this script is still in test mode and not complete.
 No changes will be made to your system, but use it at your own risk.
-Distributed under the GPL v3 (https://www.gnu.org/licenses/gpl-3.0.en.html)
+Distributed under the GPL v3 
 
 Usage: 
 {0} -h    Display this help
@@ -139,9 +134,6 @@ Usage:
 
 
 class CusArgumentParser(argparse.ArgumentParser):
-    """
-        Redifines custom argparse help message
-    """
     def print_help(self, file=None):
         if file is None:
             file = sys.stdout
@@ -150,10 +142,10 @@ class CusArgumentParser(argparse.ArgumentParser):
             
 def parse_args():
     """
-        Parses command line arguments
+        Parse command line arguments
         Returns them
     """
-
+    
     parser = CusArgumentParser()
     parser.add_argument('-c', '--check',
                         action = 'store_true',
@@ -167,32 +159,30 @@ def parse_args():
 
 def proc_err(ret_code, stdout, stderr):
     """
-        Displays error and exit
+        Display error and exit
     """
-    
     print(TCOLOR["TRED"], "Error while fetching the sshd configuration.", TCOLOR["RSTC"])    
     print(TCOLOR["TRED"], "Error message: ", stdout, TCOLOR["RSTC"])
     print(TCOLOR["TRED"], "Error message: ", stderr, TCOLOR["RSTC"])
     print(TCOLOR["TRED"], "Error code: ", ret_code, TCOLOR["RSTC"])
 
-    sys.exit(ret_code)
-
-
-def check_sshd_config(is_compliant):
+    sys.exit(ret_code)    
+ 
+ 
+def check_sshd_config():
     """
-        Checks the OpenSSH configured options by running sshd -T
-        Returns is_compliant
+        Check the OpenSSH configured options by running sshd -T
     """
-
+    
     #Filtering only the values we are interested with
     print("\nChecking for sshd_config options..")
     ret_code, stdout, stderr = run_prg("sshd", "-T")
     if ret_code != 0:
         proc_err(ret_code, stdout, stderr)
-    if PY_MAJ_VER >= 3:
+    if PyMajVer >= 3:
         stdout = ''.join(map(chr, stdout))
-
-    sshd_cfg_all_rows = stdout.split(NL)
+        
+    sshd_cfg_all_rows = stdout.split(nl)
     sshd_cfg_chk_rows = []
     for sshd_cfg_all_row in sshd_cfg_all_rows:
         for sshd_opt in sshd_opts:
@@ -207,33 +197,32 @@ def check_sshd_config(is_compliant):
                 if sshd_cfg_chk_elem[1] != corr_val:
                     sshd_cfg_chk_elem = str(sshd_cfg_chk_elem)
                     sshd_cfg_chk_elem = re.sub('[\[\]\']', '', 
-                                               sshd_cfg_chk_elem)
+                                               sshd_cfg_chk_elem)                                                       
                     sshd_cfg_chk_elem = sshd_cfg_chk_elem.replace(chr(44),
                                                                   chr(58))
                     print(TCOLOR["TYELLOW"], "The sshd option ", 
                           TCOLOR["BYELLOW"], sshd_cfg_chk_elem, TCOLOR["RSTC"],
                           TCOLOR["TYELLOW"], " is not compliant", 
                           TCOLOR["RSTC"])
-                    is_compliant = False
-                break
+                    is_compliant = False       
+                break    
 
-    return is_compliant
-def check_macs(is_compliant):
+                
+def check_macs():
     """
-        Checks for weak macs algorithms
-        Returns is_compliant
+        Check for weak macs algorithms
     """
-
+    
     print("\nChecking for weak MAC algorithms..")
     ret_code, stdout, stderr = run_piped_prg("sshd", "-T", "|", 
                                              "grep", "-w","macs")
     if ret_code != 0:
-        proc_err(ret_code, stdout, stderr)
-    if PY_MAJ_VER >= 3:
+        proc_err(ret_code, stdout, stderr)   
+    if PyMajVer >= 3:
         stdout = ''.join(map(chr, stdout))
         
-    sshd_macs_pre = stdout.split()[1]
-    sshd_macs = sshd_macs_pre.split(chr(44))
+    sshd_macs_pre = stdout.split()[1]  
+    sshd_macs = sshd_macs_pre.split(chr(44)) 
 
     for safe_mac in safe_macs:
         if safe_mac in sshd_macs:
@@ -243,32 +232,29 @@ def check_macs(is_compliant):
 have been found:", TCOLOR["RSTC"])
         for sshd_mac in sshd_macs:
             print(TCOLOR["BYELLOW"], sshd_mac, TCOLOR["RSTC"])
-        is_compliant = False
+        is_compliant = False    
     else:
         print(TCOLOR["TGREEN"], "MAC algorithms: OK", TCOLOR["RSTC"])
-    
-    return is_compliant
-    
-
-def check_ciphers(is_compliant):
+        
+        
+def check_ciphers():
     """
-        Checks for weak ciphers
-        Returns is_compliant
+        Check for weak ciphers
     """
-    
+    global is_compliant
     print("\nChecking for weak ciphers..")
     ret_code, stdout, stderr = run_piped_prg("sshd", "-T", "|", 
                                              "grep","-w","ciphers")
     if ret_code != 0:
-        proc_err(ret_code, stdout, stderr)
-    if PY_MAJ_VER >= 3:
+        proc_err(ret_code, stdout, stderr) 
+    if PyMajVer >= 3:
         stdout = ''.join(map(chr, stdout))
          
-    sshd_ciphers_pre = stdout.split()[1]
-    sshd_ciphers = sshd_ciphers_pre.split(chr(44))
+    sshd_ciphers_pre = stdout.split()[1]  
+    sshd_ciphers = sshd_ciphers_pre.split(chr(44)) 
     for safe_cipher in safe_ciphers:
         if safe_cipher in sshd_ciphers:
-            sshd_ciphers.remove(safe_cipher)
+                sshd_ciphers.remove(safe_cipher)
     if sshd_ciphers:
         print(TCOLOR["TYELLOW"], "Warning! The following unsafe ciphers have \
 been found.",
@@ -277,51 +263,45 @@ been found.",
             print(TCOLOR["BYELLOW"], sshd_cipher, TCOLOR["RSTC"])
         is_compliant = False
     else:
-        print(TCOLOR["TGREEN"], "Ciphers are OK.", TCOLOR["RSTC"])
-
-    return is_compliant
-
-
+        print(TCOLOR["TGREEN"], "Ciphers are OK.", TCOLOR["RSTC"])    
+        
+        
 def main():
-    """
-        Main func
-    """
 
-    is_compliant = True
     try:
         if os.getuid() != 0:
-            print(TCOLOR["TRED"], "You need to have root privileges.",
+            print(TCOLOR["TRED"], "You need to have root privileges.", 
                   TCOLOR["RSTC"])
             sys.exit(5)
     except AttributeError:
         print(TCOLOR["TRED"], "Unsupported OS or config", TCOLOR["RSTC"])
         sys.exit(1)
-
+        
     if not which_prg("sshd"):
-        print(TCOLOR["TRED"], "sshd not found or not in the path.",
+        print(TCOLOR["TRED"], "sshd not found or not in the path.", 
               TCOLOR["RSTC"])
         sys.exit(1)
-
-    if not check_procrun("sshd"):
-        print("Notice: The sshd process is not running.")
+    
+    if not (check_procrun("sshd")):
+       print("Notice: The sshd process is not running.")
     else:
-        print(TCOLOR["TGREEN"], "The sshd process is running: OK",
+       print(TCOLOR["TGREEN"], "The sshd process is running: OK", 
              TCOLOR["RSTC"])
         
-    is_compliant = check_sshd_config(is_compliant)
-    is_compliant = check_macs(is_compliant)
-    is_compliant = check_ciphers(is_compliant)
+    check_sshd_config()
+    check_macs()
+    check_ciphers()
 
     if is_compliant:
-        print(TCOLOR["TGREEN"], "\nsshd (OpenSSH) security settings are OK",
+        print(TCOLOR["TGREEN"], "\nsshd (OpenSSH) security settings are OK", 
         TCOLOR["RSTC"])
     else:
         print(TCOLOR["TYELLOW"], "\nsshd (OpenSSH) security settings are \
 NOT OK", TCOLOR["RSTC"]) 
 
 
-arguments = parse_args()
-if arguments.check is None:
+args = parse_args()
+if args.check is None:
     print(TCOLOR["TYELLOW"], "Invalid cmdline args", TCOLOR["RSTC"])
     print(str_prolog)
     sys.exit()
