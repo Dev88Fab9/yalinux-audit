@@ -22,6 +22,7 @@ except ImportError:
 except RuntimeError:
     print("Error on one or more modules.")
     print(traceback.print_exc())
+    
 sshd_opts = [
              "clientalivecountmax", 
              "compression", 
@@ -97,9 +98,13 @@ safe_ciphers = [
                 ]
 
 TCOLOR = set_ansiterm()
-
-
+TYELLOW = TCOLOR["TYELLOW"]
+TRED = TCOLOR["TRED"]
+TGREEN = TCOLOR["TGREEN"]
+TRST = TCOLOR["RSTC"]
+BYELLOW = TCOLOR["BYELLOW"]
 NL = '\n'
+
 if int(platform.python_version_tuple()[0]) < 3:
     PY_MAJ_VER = 2
 else:
@@ -123,13 +128,13 @@ More info at https://www.python.org/doc/sunset-python-2/
 """
 
 if PY_MAJ_VER == 2 and PY_MIN_VER == 6:
-    print(TCOLOR["TYELLOW"], OLD_VER_MSG2, TCOLOR["RSTC"])
+    print(TYELLOW, OLD_VER_MSG2, TRST)
 if PY_MAJ_VER == 2 and PY_MIN_VER < 6:
-    print(TCOLOR["TYELLOW"], OLD_VER_MSG3, TCOLOR["RSTC"])
+    print(TYELLOW, OLD_VER_MSG3, TRST)
     print("Exiting...")
     sys.exit(11)
 if PY_MAJ_VER == 2 and PY_MIN_VER == 7:
-    print(TCOLOR["TYELLOW"], OLD_VER_MSG1, TCOLOR["RSTC"])
+    print(TYELLOW, OLD_VER_MSG1, TRST)
 
 
 str_prolog = """ 
@@ -180,10 +185,10 @@ def proc_err(ret_code, stdout, stderr):
         Displays error and exit
     """
     
-    print(TCOLOR["TRED"], "Error while fetching the sshd configuration.", TCOLOR["RSTC"])    
-    print(TCOLOR["TRED"], "Error message: ", stdout, TCOLOR["RSTC"])
-    print(TCOLOR["TRED"], "Error message: ", stderr, TCOLOR["RSTC"])
-    print(TCOLOR["TRED"], "Error code: ", ret_code, TCOLOR["RSTC"])
+    print(TRED, "Error while fetching the sshd configuration.", TRST)    
+    print(TRED, "Error message: ", stdout, TRST)
+    print(TRED, "Error message: ", stderr, TRST)
+    print(TRED, "Error code: ", ret_code, TRST)
 
     sys.exit(ret_code)
 
@@ -222,15 +227,14 @@ def check_sshd_config(is_compliant):
                                                sshd_cfg_chk_elem)
                     sshd_cfg_chk_elem = sshd_cfg_chk_elem.replace(chr(44),
                                                                   chr(58))                                        
-                    print(TCOLOR["TYELLOW"], "The sshd option ",
-                          TCOLOR["BYELLOW"], sshd_cfg_chk_elem, TCOLOR["RSTC"],
-                          TCOLOR["TYELLOW"], " is not compliant",
-                          TCOLOR["RSTC"])
+                    print(TYELLOW, "The sshd option ",
+                          BYELLOW, sshd_cfg_chk_elem, TRST, TYELLOW, 
+                          " is not compliant", TRST)
                     is_compliant = False
                 break
                 
     if is_compliant:
-        print(TCOLOR["TYELLOW"], "OK", TCOLOR["RSTC"])  
+        print(TYELLOW, "OK", TRST)  
         
     return is_compliant
     
@@ -256,13 +260,13 @@ def check_macs(is_compliant):
         if safe_mac in sshd_macs:
             sshd_macs.remove(safe_mac)
     if sshd_macs:
-        print(TCOLOR["TYELLOW"], "Warning! The following unsafe MAC algorithms \
-have been found:", TCOLOR["RSTC"])
+        print(TYELLOW, "Warning! The following unsafe MAC algorithms have been \
+found:", TRST)
         for sshd_mac in sshd_macs:
-            print(TCOLOR["BYELLOW"], sshd_mac, TCOLOR["RSTC"])
+            print(BYELLOW, sshd_mac, TRST)
         is_compliant = False
     else:
-        print(TCOLOR["TGREEN"], "MAC algorithms: OK", TCOLOR["RSTC"])
+        print(TGREEN, "MAC algorithms: OK", TRST)
     
     return is_compliant
     
@@ -287,14 +291,13 @@ def check_ciphers(is_compliant):
         if safe_cipher in sshd_ciphers:
             sshd_ciphers.remove(safe_cipher)
     if sshd_ciphers:
-        print(TCOLOR["TYELLOW"], "Warning! The following unsafe ciphers have \
-been found.",
-              TCOLOR["RSTC"])
+        print(TYELLOW, "Warning! The following unsafe ciphers have been found.",
+              TRST)
         for sshd_cipher in sshd_ciphers:
-            print(TCOLOR["BYELLOW"], sshd_cipher, TCOLOR["RSTC"])
+            print(BYELLOW, sshd_cipher, TRST)
         is_compliant = False
     else:
-        print(TCOLOR["TGREEN"], "OK", TCOLOR["RSTC"])
+        print(TGREEN, "OK", TRST)
 
     return is_compliant
 
@@ -324,7 +327,50 @@ def check_sshd_config_perms(is_compliant, config_file):
         
     return True
     
+    
+def check_sshd_hosts_keyfiles_perms(is_compliant):
+    """
+        Verifies the host keys files permissions
+        Max 644 for a public key
+        No permissions for group and others for private keys
+    """
+    ssh_path = "/etc/ssh/"
+    ret_code, stdout, stderr = run_prg("ls", "-1", ssh_path)
+    if not ret_code == 0:
+        print(TYELLOW, "An error has occurred fetching the host keys files {0}"
+        .format(stdout), TRST)
+        is_compliant = False
+        return is_compliant
         
+    if PY_MAJ_VER >=3:
+        stdout = ''.join(map(chr, stdout))
+        
+    keyfiles = stdout.split()
+    invalid_pub_modes = [ 3, 6, 7 ]
+    
+    for keyfile in keyfiles:
+        keyfile = ''.join([ssh_path, keyfile])
+        try:
+            status = os.stat(keyfile)
+        except RuntimeError:
+            print(TYELLOW, "Error processing file {}".format(keyfile), TRST)
+        mode = oct(status.st_mode)
+        o_mode = mode[-1]
+        g_mode = mode[-2]
+        if keyfile.endswith(".pub"):
+            if o_mode in invalid_pub_modes or g_mode in invalid_pub_modes:
+                is_compliant = False
+                print(TYELLOW, "Invalid mode {0} for public key file {1}: it \
+must not be writable by others or the group".format(mode, keyfile), TRST)
+        else:
+            if not o_mode or g_mode == 0:
+                is_compliant = False
+                print(TYELLOW, "Invalid mode {0} for private key file \
+{1}: it must not be accessible by others or the group".format(mode, keyfile), 
+TRST)
+
+    return is_compliant
+    
 def main():
     """
         Main func
@@ -333,60 +379,60 @@ def main():
     is_compliant = True
     try:
         if os.getuid() != 0:
-            print(TCOLOR["TRED"], "You need to have root privileges.",
-                  TCOLOR["RSTC"])
+            print(TRED, "You need to have root privileges.",
+                  TRST)
             sys.exit(5)
     except AttributeError:
-        print(TCOLOR["TRED"], "Unsupported OS or config", TCOLOR["RSTC"])
+        print(TRED, "Unsupported OS or config", TRST)
         sys.exit(1)
 
     if not which_prg("sshd"):
-        print(TCOLOR["TRED"], "sshd not found or not in the path.",
-              TCOLOR["RSTC"])
+        print(TRED, "sshd not found or not in the path.",
+              TRST)
         sys.exit(1)
 
     if not check_procrun("sshd"):
         print("Notice: The sshd process is not running.")
     else:
         print("The sshd process is running:", end = ' ')
-        print(TCOLOR["TGREEN"], "OK", TCOLOR["RSTC"])     
+        print(TGREEN, "OK", TRST)     
         
     print("Checking for configuration errors:", end = ' ')    
     is_compliant = verify_sshd_config(is_compliant)
     if not is_compliant:
-        print(TCOLOR["TRED"], "\nFatal: a configuration error was reported.",
-             TCOLOR["RSTC"])
-        print(TCOLOR["TRED"], stdout, TCOLOR["RSTC"])  
+        print(TRED, "\nFatal: a configuration error was reported.", TRST)
+        print(TRED, stdout, TRST)  
         print("Fix any issue and try again")
         sys.exit(1)
     else:
-        print(TCOLOR["TGREEN"], "OK", TCOLOR["RSTC"]) 
+        print(TGREEN, "OK", TRST) 
     
-    print("Configuration file permissions:", end = ' ')
+    print("Checking configuration file permissions:", end = ' ')
     config_file = '/etc/ssh/sshd_config'
     is_compliant = check_sshd_config_perms(is_compliant, config_file)
     if is_compliant:
-        print(TCOLOR["TGREEN"], "OK", TCOLOR["RSTC"])
+        print(TGREEN, "OK", TRST)
     else:
-        print(TCOLOR["TYELLOW"], "Warning. The sshd_config file should be \
- accessible only by root.", TCOLOR["RSTC"])
+        print(TYELLOW, "Warning. The sshd_config file should be \
+ accessible only by root.", TRST)
     
-    
+    print("Checking for host keys files permissions")
+    is_compliant = check_sshd_hosts_keyfiles_perms(is_compliant)
+    if is_compliant:
+        print(TGREEN, "OK", TRST)
     is_compliant = check_sshd_config(is_compliant)
     is_compliant = check_macs(is_compliant)
     is_compliant = check_ciphers(is_compliant)
 
     if is_compliant:
-        print(TCOLOR["TGREEN"], "\nsshd (OpenSSH) security settings are OK",
-        TCOLOR["RSTC"])
+        print(TGREEN, "\nsshd (OpenSSH) security settings are OK", TRST)
     else:
-        print(TCOLOR["TYELLOW"], "\nsshd (OpenSSH) security settings are \
-NOT OK", TCOLOR["RSTC"]) 
+        print(TYELLOW, "\nsshd (OpenSSH) security settings are NOT OK", TRST) 
 
 
 arguments = parse_args()
 if arguments.check is None:
-    print(TCOLOR["TYELLOW"], "Invalid cmdline args", TCOLOR["RSTC"])
+    print(TYELLOW, "Invalid cmdline args", TRST)
     print(str_prolog)
     sys.exit()
 
